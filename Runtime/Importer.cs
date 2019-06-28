@@ -215,60 +215,49 @@ namespace Parabox.Stl
             return v;
 		}
 
-		/// <summary>
-		/// Determine whether this file is a binary stl format or not.
-		/// </summary>
-		/// <param name="path"></param>
-		/// <returns></returns>
-		static bool IsBinary(string path)
-		{
-			// http://stackoverflow.com/questions/968935/compare-binary-files-in-c-sharp
-			FileInfo file = new FileInfo(path);
 
-			if(file.Length < 130)
-				return false;
 
-			var isBinary = false;
+        /// <summary>
+        /// Determine whether this file is a binary stl format or not.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        static bool IsBinary(string path)
+        {
+            // http://stackoverflow.com/questions/968935/compare-binary-files-in-c-sharp
+            FileInfo file = new FileInfo(path);
 
-			using(FileStream f0 = file.OpenRead())
-			{
-				using(BufferedStream bs0 = new BufferedStream(f0))
-				{
-					for(long i = 0; i < 80; i++)
-					{
-					    var readByte = bs0.ReadByte();
-					    if (readByte == 0x0)
-					    {
-					        isBinary = true;
-					        break;
-					    }
-					}
-				}
-			}
+            if (file.Length < 130)
+                return false;
 
-            if (!isBinary)
+
+            using(var fileStream = file.OpenRead())
+            using (var bufferedStream = new BufferedStream(fileStream))
             {
-                using (FileStream f0 = file.OpenRead())
+                // Binary formatted STL files have ASCII characters in the first 80 bytes.
+                // So we must check more than 80 bytes.
+                for (long i = 0; i < 1000; i++)
                 {
-                    using (BufferedStream bs0 = new BufferedStream(f0))
+                    var readByte = bufferedStream.ReadByte();
+                    var isBinary = HasUnprintedCharacter(readByte);
+                    if (isBinary)
                     {
-                        var byteArray = new byte[6];
-
-                        for (var i = 0; i < 6; i++)
-                        {
-                            byteArray[i] = (byte)bs0.ReadByte();
-                        }
-
-                        var text = Encoding.UTF8.GetString(byteArray);
-                        isBinary = text != "solid ";
+                        return true;
                     }
                 }
             }
 
-			return isBinary;
+            return false;
 		}
 
-		static Mesh[] ImportSmoothNormals(IEnumerable<Facet> faces, CoordinateSpace modelCoordinateSpace, UpAxis modelUpAxis, IndexFormat indexFormat)
+        static bool HasUnprintedCharacter(int value)
+        {
+            return 0 <= value && value <= 31;
+        }
+
+
+
+        static Mesh[] ImportSmoothNormals(IEnumerable<Facet> faces, CoordinateSpace modelCoordinateSpace, UpAxis modelUpAxis, IndexFormat indexFormat)
 		{
 			var facets = faces as Facet[] ?? faces.ToArray();
 			int maxVertexCount = indexFormat == IndexFormat.UInt32 ? MaxFacetsPerMesh32 * 3 : MaxFacetsPerMesh16 * 3;
