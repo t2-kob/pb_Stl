@@ -239,7 +239,7 @@ namespace Parabox.Stl
                 for (long i = 0; i < 1000; i++)
                 {
                     var readByte = bufferedStream.ReadByte();
-                    var isBinary = HasUnprintedCharacter(readByte);
+                    var isBinary = readByte == 0x0;
                     if (isBinary)
                     {
                         return true;
@@ -250,10 +250,7 @@ namespace Parabox.Stl
             return false;
 		}
 
-        static bool HasUnprintedCharacter(int value)
-        {
-            return 0 <= value && value <= 31;
-        }
+
 
 
 
